@@ -1,0 +1,538 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  ADMIN
+  SUPER_ADMIN
+  EDITOR
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+enum MediaVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum MediaStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model AdminUser {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  name         String
+  role         AdminRole      @default(ADMIN)
+  isActive     Boolean        @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     AdminSession[]
+
+  @@index([email])
+}
+
+model AdminSession {
+  id           String    @id @default(uuid())
+  adminUserId  String
+  adminUser    AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  sessionToken String    @unique
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime  @default(now())
+
+  @@index([sessionToken])
+  @@index([adminUserId])
+}
+
+model PortfolioSettings {
+  id               String        @id @default("default-portfolio-settings")
+  status           PublishStatus @default(PUBLISHED)
+  draftVersion     Int           @default(1)
+  publishedVersion Int           @default(1)
+  lastPublishedAt  DateTime?     @default(now())
+  publishedBy      String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  adminUserId String?
+  adminEmail  String?
+  action      String   // 'CREATE' | 'UPDATE' | 'PUBLISH' | 'UNPUBLISH' | 'ARCHIVE' | 'DELETE' | 'PUBLISH_ALL' | 'DISCARD_DRAFT'
+  entityType  String   // 'Personal' | 'Hero' | 'About' | 'Experience' | 'Skills' | 'Projects' | 'Education' | 'Certifications' | 'Achievements' | 'SocialLink' | 'Contact' | 'Navigation' | 'SEO' | 'SiteSettings' | 'Global'
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model PersonalInformation {
+  id                 String        @id @default(uuid())
+  fullName           String        @default("Ashishkumar Dudhat")
+  professionalTitle  String        @default("Senior Software Engineer | Lead Engineer | Full Stack Developer")
+  email              String        @default("dudhatashish1995@gmail.com")
+  phone              String        @default("+91 7600908370")
+  location           String        @default("Ahmedabad, Gujarat")
+  availability       String        @default("Available to rejoin immediately")
+  bio                Json?
+  profileImageId     String?       @default("/ashish-photo.jpg")
+  enabled            Boolean       @default(true)
+  status             PublishStatus @default(PUBLISHED)
+  publishedAt        DateTime?     @default(now())
+  publishedData      Json?
+  version            Int           @default(1)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model Hero {
+  id                 String        @id @default(uuid())
+  eyebrow            String        @default("Senior Software Engineer & Lead Engineer")
+  headline           String        @default("Ashishkumar Dudhat")
+  subheadline        String        @default("Full Stack & Technical Leadership")
+  description        String        @default("Building scalable, high-performance web applications & microservices across Fintech, Healthcare, and SaaS domains.")
+  primaryCtaLabel    String        @default("Explore Projects")
+  primaryCtaTarget   String        @default("#projects")
+  secondaryCtaLabel  String        @default("Initiate Contact")
+  secondaryCtaTarget String        @default("#contact")
+  enabled            Boolean       @default(true)
+  status             PublishStatus @default(PUBLISHED)
+  publishedAt        DateTime?     @default(now())
+  publishedData      Json?
+  version            Int           @default(1)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model HeroStat {
+  id          String   @id @default(uuid())
+  label       String
+  value       String
+  description String
+  iconName    String
+  order       Int      @default(0)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model About {
+  id               String           @id @default(uuid())
+  editorialHeading String           @default("Engineering Scalable Digital Products with Architectural Depth & Precision.")
+  introduction     Json?
+  domains          Json?
+  enabled          Boolean          @default(true)
+  status           PublishStatus    @default(PUBLISHED)
+  publishedAt      DateTime?        @default(now())
+  publishedData    Json?
+  version          Int              @default(1)
+  highlights       AboutHighlight[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([status])
+}
+
+model AboutHighlight {
+  id          String   @id @default(uuid())
+  aboutId     String
+  about       About    @relation(fields: [aboutId], references: [id], onDelete: Cascade)
+  label       String
+  value       String
+  description String?
+  order       Int      @default(0)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([aboutId])
+}
+
+model ExperienceItem {
+  id           String        @id // Stable unique string ID e.g. "thirdrock-techkno"
+  company      String
+  role         String
+  startDate    String        @default("2025-07")
+  endDate      String?
+  isCurrent    Boolean       @default(false)
+  location     String        @default("Ahmedabad, India")
+  summary      String
+  highlights   Json          // Array of responsibility bullet objects
+  metrics      Json?         // Array of key achievement metric objects
+  technologies Json          // Array of technology tag strings
+  isBreak      Boolean       @default(false)
+  order        Int           @default(0)
+  enabled      Boolean       @default(true)
+  status       PublishStatus @default(PUBLISHED)
+  publishedAt  DateTime?     @default(now())
+  publishedData Json?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+  @@index([company])
+}
+
+model SkillCategory {
+  id          String        @id // Stable unique ID e.g. "cat-languages"
+  name        String
+  slug        String        @unique
+  description String?
+  order       Int           @default(0)
+  enabled     Boolean       @default(true)
+  status      PublishStatus @default(PUBLISHED)
+  publishedAt DateTime?     @default(now())
+  version     Int           @default(1)
+  skills      Skill[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+}
+
+model Skill {
+  id                 String        @id @default(uuid())
+  categoryId         String
+  category           SkillCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name               String
+  slug               String        @unique
+  description        String?
+  proficiencyPercent Int           @default(90)
+  yearsOfExperience  Int           @default(5)
+  isFeatured         Boolean       @default(false)
+  awsComponents      Json?
+  order              Int           @default(0)
+  enabled            Boolean       @default(true)
+  status             PublishStatus @default(PUBLISHED)
+  publishedAt        DateTime?     @default(now())
+  version            Int           @default(1)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([categoryId])
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+}
+
+model Project {
+  id                 String        @id // Stable unique ID e.g. "scanofe-ultrasound"
+  name               String
+  title              String
+  subtitle           String
+  domain             String
+  category           String        // 'Healthcare' | 'Fintech' | 'SaaS' | 'Enterprise' | 'Networking' | 'Web3 / Realtime'
+  period             String        @default("2024 - 2025")
+  description        String
+  capabilities       Json          // Array of key capability strings
+  highlights         Json?         // Array of highlight strings
+  technologies       Json          // Array of technology strings
+  techStackByLayer   Json?         // Structured object with frontend, backend, database, cloud, architecture
+  architecturePoints Json          // Array of architecture decision bullet strings
+  impact             Json?         // Array of impact metrics
+  featured           Boolean       @default(false)
+  images             Json          // Array of image URL or media ID strings
+  liveUrl            String?
+  githubUrl          String?
+  order              Int           @default(0)
+  enabled            Boolean       @default(true)
+  status             PublishStatus @default(PUBLISHED)
+  publishedAt        DateTime?     @default(now())
+  publishedData      Json?
+  version            Int           @default(1)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+  @@index([featured])
+  @@index([category])
+}
+
+model AcademicEducation {
+  id           String        @id @default(uuid())
+  degree       String
+  field        String?
+  institution  String
+  location     String        @default("India")
+  period       String
+  startDate    String?
+  endDate      String?
+  isCurrent    Boolean       @default(false)
+  description  String?
+  highlights   Json?
+  order        Int           @default(0)
+  enabled      Boolean       @default(true)
+  status       PublishStatus @default(PUBLISHED)
+  publishedAt  DateTime?     @default(now())
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+}
+
+model ProfessionalCertification {
+  id             String        @id @default(uuid())
+  title          String
+  issuer         String
+  credentialId   String?
+  credentialUrl  String?
+  issueDate      String?
+  expirationDate String?
+  description    String?
+  imageUrl       String?
+  order          Int           @default(0)
+  enabled        Boolean       @default(true)
+  status         PublishStatus @default(PUBLISHED)
+  publishedAt    DateTime?     @default(now())
+  version        Int           @default(1)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+}
+
+model Achievement {
+  id           String        @id @default(uuid())
+  title        String
+  description  String?
+  organization String?
+  url          String?
+  metric       String?
+  date         String?
+  order        Int           @default(0)
+  enabled      Boolean       @default(true)
+  status       PublishStatus @default(PUBLISHED)
+  publishedAt  DateTime?     @default(now())
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+}
+
+model ContactSettings {
+  id               String        @id @default("default-contact")
+  heading          String        @default("Let's Build Something Exceptional Together.")
+  description      String        @default("Have a high-concurrency microservices project, fintech integration, or engineering leadership role in mind? Reach out directly.")
+  primaryCtaLabel  String        @default("Initiate Discussion")
+  primaryCtaTarget String        @default("#contact")
+  enabled          Boolean       @default(true)
+  status           PublishStatus @default(PUBLISHED)
+  publishedAt      DateTime?     @default(now())
+  publishedData    Json?
+  version          Int           @default(1)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model SocialLink {
+  id          String        @id @default(uuid())
+  platform    String
+  label       String
+  url         String
+  iconKey     String        @default("link")
+  order       Int           @default(0)
+  enabled     Boolean       @default(true)
+  status      PublishStatus @default(PUBLISHED)
+  publishedAt DateTime?     @default(now())
+  version     Int           @default(1)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+}
+
+model NavigationItem {
+  id           String        @id @default(uuid())
+  label        String
+  target       String
+  type         String        @default("section")
+  openInNewTab Boolean       @default(false)
+  order        Int           @default(0)
+  enabled      Boolean       @default(true)
+  status       PublishStatus @default(PUBLISHED)
+  publishedAt  DateTime?     @default(now())
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([order])
+  @@index([enabled])
+  @@index([status])
+}
+
+model SeoSettings {
+  id                    String        @id @default("default-seo")
+  title                 String        @default("ASHISHKUMAR DUDHAT | Senior Software Engineer & Technical Lead")
+  description           String        @default("Senior Software Engineer & Lead Engineer with 8+ years of experience architecting and scaling production web applications across MERN & MEAN full stack environments.")
+  keywords              String?       @default("Senior Software Engineer, Technical Lead, Full Stack Developer, React, Node.js, TypeScript, PostgreSQL, Angular, MERN, Microservices")
+  canonicalUrl          String?
+  robotsIndex           Boolean       @default(true)
+  robotsFollow          Boolean       @default(true)
+  ogTitle               String?
+  ogDescription         String?
+  ogImageId             String?
+  twitterCard           String        @default("summary_large_image")
+  twitterTitle          String?
+  twitterDescription    String?
+  twitterImageId        String?
+  faviconMediaId        String?
+  structuredDataEnabled Boolean       @default(false)
+  structuredDataJson    String?
+  status                PublishStatus @default(PUBLISHED)
+  publishedAt           DateTime?     @default(now())
+  publishedData         Json?
+  version               Int           @default(1)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model SiteSettings {
+  id                 String        @id @default("default-site-settings")
+  siteName           String        @default("Ashishkumar Dudhat Portfolio")
+  defaultTitle       String        @default("ASHISHKUMAR DUDHAT | Senior Software Engineer & Technical Lead")
+  defaultDescription String        @default("Senior Software Engineer & Lead Engineer specializing in full stack Web Applications, Microservices, and Cloud Architecture.")
+  locale             String        @default("en-US")
+  timezone           String        @default("Asia/Kolkata")
+  maintenanceMode    Boolean       @default(false)
+  analyticsProvider  String?
+  analyticsId        String?
+  status             PublishStatus @default(PUBLISHED)
+  publishedAt        DateTime?     @default(now())
+  publishedData      Json?
+  version            Int           @default(1)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model Media {
+  id               String          @id @default(uuid())
+  filename         String
+  originalFilename String
+  storageKey       String          @unique
+  mimeType         String
+  mediaType        MediaType       @default(IMAGE)
+  size             Int
+  width            Int?
+  height           Int?
+  altText          String?
+  caption          String?
+  description      String?
+  visibility       MediaVisibility @default(PUBLIC)
+  status           MediaStatus     @default(ACTIVE)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  resumes          Resume[]
+
+  @@index([filename])
+  @@index([mediaType])
+  @@index([visibility])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Resume {
+  id           String        @id @default(uuid())
+  mediaId      String
+  media        Media         @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  title        String        @default("Ashishkumar Dudhat - Resume")
+  versionLabel String?
+  status       PublishStatus @default(DRAFT)
+  isActive     Boolean       @default(false)
+  publishedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([isActive])
+  @@index([status])
+  @@index([mediaId])
+}
+
+model MediaItem {
+  id        String   @id @default(uuid())
+  type      String
+  url       String
+  alt       String
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum LeadStatus {
+  UNREAD
+  READ
+  IN_PROGRESS
+  REPLIED
+  ARCHIVED
+}
+
+model ContactMessage {
+  id          String     @id @default(uuid())
+  name        String
+  email       String
+  subject     String
+  message     String
+  status      LeadStatus @default(UNREAD)
+  read        Boolean    @default(false)
+  adminNotes  String?
+  ipAddress   String?
+  userAgent   String?
+  repliedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status])
+  @@index([read])
+  @@index([createdAt])
+  @@index([email])
+}
