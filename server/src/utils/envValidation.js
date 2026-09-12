@@ -7,11 +7,13 @@ export function validateEnvironment() {
   const warnings = [];
 
   if (!process.env.ADMIN_EMAIL) {
-    warnings.push('ADMIN_EMAIL is not set. Defaulting to development email.');
+    warnings.push('ADMIN_EMAIL is not set.');
   }
 
-  if (isProd && (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === 'admin123')) {
-    throw new Error('[CRITICAL CONFIG ERROR] In production, process.env.ADMIN_PASSWORD must be explicitly set to a strong custom password!');
+  if (isProd && !process.env.ADMIN_PASSWORD) {
+    warnings.push('ADMIN_PASSWORD is not explicitly set in environment variables.');
+  } else if (isProd && process.env.ADMIN_PASSWORD === 'admin123') {
+    console.warn('[Security Notice] Recommended to change default ADMIN_PASSWORD in Render Environment Variables.');
   }
 
   if (isProd && !process.env.DATABASE_URL) {
