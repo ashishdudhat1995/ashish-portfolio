@@ -356,6 +356,22 @@ app.get('/api/admin/leads/:id', requireAdminAuth, leadsController.getAdminLeadBy
 app.put('/api/admin/leads/:id', requireAdminAuth, leadsController.updateAdminLead);
 app.delete('/api/admin/leads/:id', requireAdminAuth, leadsController.deleteAdminLead);
 
+// Serve Production Frontend SPA Build (dist) & Handle /admin Routing
+const distPath = path.resolve(process.cwd(), 'dist');
+app.use(express.static(distPath));
+
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+    return next();
+  }
+  const indexPath = path.resolve(distPath, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      next();
+    }
+  });
+});
+
 // Centralized Error Handler Middleware
 app.use(errorHandler);
 
