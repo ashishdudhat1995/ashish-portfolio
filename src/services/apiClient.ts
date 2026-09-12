@@ -3,7 +3,7 @@ import type { PortfolioData } from '../types/portfolio';
 
 export function getApiBaseUrl(): string {
   const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
-  if (envUrl && envUrl.trim() !== '') {
+  if (envUrl && envUrl.trim() !== '' && !envUrl.includes('localhost:5000')) {
     return envUrl.trim();
   }
   if (typeof window !== 'undefined' && window.location.port === '5173') {
