@@ -10,18 +10,20 @@ let currentResetCode = null;
 let currentResetToken = null;
 let resetCodeExpiresAt = null;
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'dudhatashish1995@gmail.com';
-const INITIAL_PLAIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const ADMIN_NAME = process.env.ADMIN_NAME || 'Ashishkumar Dudhat';
+const getAdminEmail = () => (process.env.ADMIN_EMAIL || 'dudhatashish1995@gmail.com').trim();
+const getInitialPassword = () => process.env.ADMIN_PASSWORD || 'admin123';
+const getAdminName = () => process.env.ADMIN_NAME || 'Ashishkumar Dudhat';
 
 /**
- * Load admin password hash from PostgreSQL database (with initial env fallback)
+ * Dynamic getter for live admin credentials from process.env or PostgreSQL
  */
 async function getAdminPasswordHash() {
+  const adminEmail = getAdminEmail();
   try {
     const admin = await prisma.adminUser.findFirst({
-      where: { email: ADMIN_EMAIL }
-    });
+      where: { email: adminEmail }
+    }) || await prisma.adminUser.findFirst();
+
     if (admin && admin.passwordHash) {
       currentAdminHashedPassword = admin.passwordHash;
       return admin.passwordHash;
@@ -29,7 +31,7 @@ async function getAdminPasswordHash() {
   } catch {}
 
   if (!currentAdminHashedPassword) {
-    currentAdminHashedPassword = await passwordService.hashPassword(INITIAL_PLAIN_PASSWORD);
+    currentAdminHashedPassword = await passwordService.hashPassword(getInitialPassword());
   }
   return currentAdminHashedPassword;
 }
@@ -42,10 +44,12 @@ getAdminPasswordHash().catch(() => {});
  */
 async function saveAdminPasswordHash(newHash) {
   currentAdminHashedPassword = newHash;
+  const adminEmail = getAdminEmail();
+  const adminName = getAdminName();
   try {
     const existingAdmin = await prisma.adminUser.findFirst({
-      where: { email: ADMIN_EMAIL }
-    });
+      where: { email: adminEmail }
+    }) || await prisma.adminUser.findFirst();
 
     if (existingAdmin) {
       await prisma.adminUser.update({
@@ -55,8 +59,8 @@ async function saveAdminPasswordHash(newHash) {
     } else {
       await prisma.adminUser.create({
         data: {
-          email: ADMIN_EMAIL,
-          name: ADMIN_NAME,
+          email: adminEmail,
+          name: adminName,
           passwordHash: newHash,
           role: 'ADMIN',
           isActive: true
@@ -83,14 +87,15 @@ export const authController = {
     }
 
     const activeHash = await getAdminPasswordHash();
+    const adminEmail = getAdminEmail();
 
     // Generic response on failure to prevent account enumeration
     let isMatch = false;
-    if (email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    if (email.trim().toLowerCase() === adminEmail.toLowerCase()) {
       if (activeHash) {
         isMatch = await passwordService.verifyPassword(password, activeHash);
       } else {
-        isMatch = (password === INITIAL_PLAIN_PASSWORD);
+        isMatch = (password === getInitialPassword());
       }
     }
 
@@ -104,8 +109,8 @@ export const authController = {
     // Create session
     const adminUser = {
       id: 'admin_usr_001',
-      email: ADMIN_EMAIL,
-      name: ADMIN_NAME,
+      email: adminEmail,
+      name: getAdminName(),
       role: 'ADMIN'
     };
 
@@ -183,7 +188,7 @@ export const authController = {
     if (activeHash) {
       isCurrentValid = await passwordService.verifyPassword(currentPassword, activeHash);
     } else {
-      isCurrentValid = (currentPassword === INITIAL_PLAIN_PASSWORD);
+      isCurrentValid = (currentPassword === getInitialPassword());
     }
 
     if (!isCurrentValid) {
@@ -256,6 +261,7 @@ export const authController = {
    */
   async forgotPassword(req, res) {
     const { email } = req.body || {};
+    const adminEmail = getAdminEmail();
 
     if (!email || typeof email !== 'string') {
       return res.status(400).json({
@@ -264,7 +270,7 @@ export const authController = {
       });
     }
 
-    if (email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (email.trim().toLowerCase() !== adminEmail.toLowerCase()) {
       return res.json({
         success: true,
         message: 'If the email matches the administrator account, a password reset verification code has been dispatched.'
@@ -276,7 +282,7 @@ export const authController = {
     resetCodeExpiresAt = Date.now() + (15 * 60 * 1000); // 15 mins
 
     // Dispatch email via Nodemailer
-    await emailService.sendPasswordResetEmail(ADMIN_EMAIL, currentResetCode);
+    await emailService.sendPasswordResetEmail(adminEmail, currentResetCode);
 
     return res.json({
       success: true,
@@ -289,6 +295,7 @@ export const authController = {
    */
   async verifyResetCode(req, res) {
     const { email, code } = req.body || {};
+    const adminEmail = getAdminEmail();
 
     if (!email || !code) {
       return res.status(400).json({
@@ -297,7 +304,7 @@ export const authController = {
       });
     }
 
-    if (email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (email.trim().toLowerCase() !== adminEmail.toLowerCase()) {
       return res.status(400).json({
         success: false,
         message: 'Invalid email or reset session.'
@@ -334,6 +341,7 @@ export const authController = {
    */
   async resetPassword(req, res) {
     const { email, resetToken, code, newPassword, confirmPassword } = req.body || {};
+    const adminEmail = getAdminEmail();
 
     if (!email || !newPassword || !confirmPassword) {
       return res.status(400).json({
@@ -342,7 +350,7 @@ export const authController = {
       });
     }
 
-    if (email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (email.trim().toLowerCase() !== adminEmail.toLowerCase()) {
       return res.status(400).json({
         success: false,
         message: 'Invalid email or reset session.'
@@ -390,7 +398,7 @@ export const authController = {
   },
 
   async resetToDefaultPassword() {
-    const defaultHash = await passwordService.hashPassword(INITIAL_PLAIN_PASSWORD);
+    const defaultHash = await passwordService.hashPassword(getInitialPassword());
     await saveAdminPasswordHash(defaultHash);
   }
 };
