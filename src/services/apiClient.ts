@@ -1,9 +1,21 @@
 import { portfolioData } from '../data/portfolioData';
 import type { PortfolioData } from '../types/portfolio';
 
-const API_BASE_URL = typeof window !== 'undefined' && window.location.port === '5173'
-  ? '/api'
-  : (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
+export function getApiBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && envUrl.trim() !== '') {
+    return envUrl.trim();
+  }
+  if (typeof window !== 'undefined' && window.location.port === '5173') {
+    return '/api';
+  }
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return `${window.location.origin}/api`;
+  }
+  return '/api';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 async function parseJsonResponse(res: Response) {
   const contentType = res.headers.get('content-type') || '';

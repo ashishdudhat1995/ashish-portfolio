@@ -1,6 +1,7 @@
 import type { PortfolioData } from '../types/portfolio';
+import { getApiBaseUrl } from './apiClient';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = getApiBaseUrl();
 
 const emptyPortfolioData: PortfolioData = {
   personal: {

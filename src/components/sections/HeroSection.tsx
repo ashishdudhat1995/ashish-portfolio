@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Card3D } from '../ui/Card3D';
 import { TechStack3DMarquee } from '../ui/TechStack3DMarquee';
+import { getApiBaseUrl } from '../../services/apiClient';
 
 interface HeroSectionProps {
   personal?: any;
@@ -65,7 +66,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const handleDownloadResume = async (e: React.MouseEvent) => {
     e.preventDefault();
     const rawUrl = resume?.downloadUrl || '/api/portfolio/resume/download';
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const baseUrl = getApiBaseUrl();
     
     let fullUrl = rawUrl;
     if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
