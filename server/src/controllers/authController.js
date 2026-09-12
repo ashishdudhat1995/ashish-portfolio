@@ -18,6 +18,7 @@ const getAdminName = () => process.env.ADMIN_NAME || 'Ashishkumar Dudhat';
  * Dynamic getter for live admin credentials from process.env or PostgreSQL
  */
 async function getAdminPasswordHash() {
+  if (currentAdminHashedPassword) return currentAdminHashedPassword;
   const adminEmail = getAdminEmail();
   try {
     const admin = await prisma.adminUser.findFirst({
@@ -35,9 +36,6 @@ async function getAdminPasswordHash() {
   }
   return currentAdminHashedPassword;
 }
-
-// Initial async load
-getAdminPasswordHash().catch(() => {});
 
 /**
  * Persist new hashed password to PostgreSQL database
