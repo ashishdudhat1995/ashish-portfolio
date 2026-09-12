@@ -36,7 +36,9 @@ export function App() {
 
     // Check URL hash or path for Admin route
     const checkAdminRoute = () => {
-      if (window.location.hash === '#admin' || window.location.pathname.endsWith('/admin')) {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#admin' || path === '/admin' || path.startsWith('/admin/') || path.endsWith('/admin')) {
         setIsAdminOpen(true);
       } else {
         setIsAdminOpen(false);

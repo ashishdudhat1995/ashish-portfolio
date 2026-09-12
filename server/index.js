@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { healthController } from './src/controllers/healthController.js';
 import { authController } from './src/controllers/authController.js';
 import { dashboardController } from './src/controllers/dashboardController.js';
@@ -358,18 +359,20 @@ app.delete('/api/admin/leads/:id', requireAdminAuth, leadsController.deleteAdmin
 
 // Serve Production Frontend SPA Build (dist) & Handle /admin Routing
 const distPath = path.resolve(process.cwd(), 'dist');
-app.use(express.static(distPath));
+const indexPath = path.resolve(distPath, 'index.html');
+
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
     return next();
   }
-  const indexPath = path.resolve(distPath, 'index.html');
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      next();
-    }
-  });
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  return res.status(404).send('404 Not Found - Frontend build (dist/index.html) missing. Please ensure "npm run build" is included in your Build Command.');
 });
 
 // Centralized Error Handler Middleware
