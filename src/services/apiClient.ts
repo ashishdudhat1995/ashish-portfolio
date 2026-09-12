@@ -1,7 +1,21 @@
 import { portfolioData } from '../data/portfolioData';
 import type { PortfolioData } from '../types/portfolio';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = typeof window !== 'undefined' && window.location.port === '5173'
+  ? '/api'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
+
+async function parseJsonResponse(res: Response) {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return await res.json();
+  }
+  await res.text();
+  if (!res.ok) {
+    throw new Error(`Server Error (${res.status}): ${res.statusText || 'Unable to connect to backend server. Make sure the server is running.'}`);
+  }
+  throw new Error('Server returned invalid non-JSON response.');
+}
 
 function getAdminAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('adminToken');
@@ -295,6 +309,51 @@ export async function adminLogout() {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('csrfToken');
   }
+}
+
+export async function requestAdminForgotPassword(email: string) {
+  const res = await fetch(`${API_BASE_URL}/admin/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  const data = await parseJsonResponse(res);
+  if (!res.ok) throw new Error(data.message || 'Failed to request password reset');
+  return data;
+}
+
+export async function verifyAdminResetCode(payload: { email: string; code: string }) {
+  const res = await fetch(`${API_BASE_URL}/admin/auth/verify-reset-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await parseJsonResponse(res);
+  if (!res.ok) throw new Error(data.message || 'Failed to verify reset code');
+  return data;
+}
+
+export async function resetAdminPassword(payload: { email: string; resetToken?: string; code?: string; newPassword: string; confirmPassword: string }) {
+  const res = await fetch(`${API_BASE_URL}/admin/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await parseJsonResponse(res);
+  if (!res.ok) throw new Error(data.message || 'Failed to reset password');
+  return data;
+}
+
+export async function changeAdminPassword(payload: { currentPassword: string; newPassword: string; confirmPassword: string }) {
+  const res = await fetch(`${API_BASE_URL}/admin/auth/change-password`, {
+    method: 'POST',
+    headers: getAdminAuthHeaders(),
+    credentials: 'include',
+    body: JSON.stringify(payload)
+  });
+  const data = await parseJsonResponse(res);
+  if (!res.ok) throw new Error(data.message || 'Failed to change password');
+  return data;
 }
 
 export async function fetchDashboardSummary() {

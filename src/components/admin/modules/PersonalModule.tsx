@@ -151,7 +151,7 @@ export const PersonalModule: React.FC<PersonalModuleProps> = ({ data: initialDat
               type="email"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
-              placeholder="dudhatashish1995@gmail.com"
+              placeholder="your.email@domain.com"
               className="w-full px-4 py-2.5 rounded-xl bg-bgCard border border-borderGlass text-white font-mono focus:border-accentBlue focus:outline-none"
               required
             />

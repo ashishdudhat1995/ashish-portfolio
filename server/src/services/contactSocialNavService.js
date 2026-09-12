@@ -47,15 +47,24 @@ export const socialLinksService = {
   },
 
   async getPublicSocialLinks() {
-    const raw = await socialLinksRepository.getPublicSocialLinks();
-    return raw.map(link => ({
-      id: link.id,
-      platform: link.platform,
-      label: link.label,
-      url: link.url,
-      iconKey: link.iconKey || link.platform.toLowerCase(),
-      order: link.order
-    }));
+    try {
+      const raw = await socialLinksRepository.getPublicSocialLinks();
+      return raw.map(link => ({
+        id: link.id,
+        platform: link.platform,
+        label: link.label,
+        url: link.url,
+        iconKey: link.iconKey || link.platform.toLowerCase(),
+        order: link.order
+      }));
+    } catch {
+      return [
+        { id: '1', platform: 'GitHub', label: 'GitHub Profile', url: 'https://github.com/ashishdudhat1995', iconKey: 'github', order: 1 },
+        { id: '2', platform: 'LinkedIn', label: 'LinkedIn Profile', url: 'https://linkedin.com/in/ashishdudhat', iconKey: 'linkedin', order: 2 },
+        { id: '3', platform: 'Email', label: 'Direct Email', url: 'mailto:dudhatashish1995@gmail.com', iconKey: 'email', order: 3 },
+        { id: '4', platform: 'Phone', label: 'Direct Call', url: 'tel:+917600908370', iconKey: 'phone', order: 4 }
+      ];
+    }
   },
 
   async getSocialLinkById(id) {
@@ -117,26 +126,44 @@ export const contactService = {
    * Get Public Contact response (Merged safe public fields)
    */
   async getPublicContact() {
-    const [personal, settings] = await Promise.all([
-      personalRepository.getPrimaryProfile(),
-      contactSettingsRepository.getContactSettings()
-    ]);
+    try {
+      const [personal, settings] = await Promise.all([
+        personalRepository.getPrimaryProfile(),
+        contactSettingsRepository.getContactSettings()
+      ]);
 
-    return {
-      enabled: settings.enabled && (personal ? personal.enabled : true),
-      heading: settings.heading,
-      description: settings.description,
-      primaryCtaLabel: settings.primaryCtaLabel,
-      primaryCtaTarget: settings.primaryCtaTarget,
-      contactInfo: {
-        name: personal?.fullName || 'Ashishkumar Dudhat',
-        title: personal?.professionalTitle || 'Senior Software Engineer | Lead Engineer | Full Stack Developer',
-        email: personal?.email || 'dudhatashish1995@gmail.com',
-        phone: personal?.phone || '+91 7600908370',
-        location: personal?.location || 'Ahmedabad, Gujarat',
-        availability: personal?.availability || 'Available to rejoin immediately'
-      }
-    };
+      return {
+        enabled: settings ? settings.enabled : true,
+        heading: settings?.heading || "Let's Build Something Exceptional Together.",
+        description: settings?.description || "Have a high-concurrency microservices project, fintech integration, or engineering leadership role in mind? Reach out directly.",
+        primaryCtaLabel: settings?.primaryCtaLabel || "Initiate Discussion",
+        primaryCtaTarget: settings?.primaryCtaTarget || "#contact",
+        contactInfo: {
+          name: personal?.fullName || 'Ashishkumar Dudhat',
+          title: personal?.professionalTitle || 'Senior Software Engineer | Lead Engineer | Full Stack Developer',
+          email: personal?.email || 'dudhatashish1995@gmail.com',
+          phone: personal?.phone || '+91 7600908370',
+          location: personal?.location || 'Ahmedabad, Gujarat',
+          availability: personal?.availability || 'Available to rejoin immediately'
+        }
+      };
+    } catch {
+      return {
+        enabled: true,
+        heading: "Let's Build Something Exceptional Together.",
+        description: "Have a high-concurrency microservices project, fintech integration, or engineering leadership role in mind? Reach out directly.",
+        primaryCtaLabel: "Initiate Discussion",
+        primaryCtaTarget: "#contact",
+        contactInfo: {
+          name: 'Ashishkumar Dudhat',
+          title: 'Senior Software Engineer | Lead Engineer | Full Stack Developer',
+          email: 'dudhatashish1995@gmail.com',
+          phone: '+91 7600908370',
+          location: 'Ahmedabad, Gujarat',
+          availability: 'Available to rejoin immediately'
+        }
+      };
+    }
   },
 
   /**
@@ -175,15 +202,26 @@ export const navigationService = {
   },
 
   async getPublicNavigation() {
-    const raw = await navigationRepository.getPublicNavigation();
-    return raw.map(item => ({
-      id: item.id,
-      label: item.label,
-      target: item.target,
-      type: item.type,
-      openInNewTab: item.openInNewTab,
-      order: item.order
-    }));
+    try {
+      const raw = await navigationRepository.getPublicNavigation();
+      return raw.map(item => ({
+        id: item.id,
+        label: item.label,
+        target: item.target,
+        type: item.type,
+        openInNewTab: item.openInNewTab,
+        order: item.order
+      }));
+    } catch {
+      return [
+        { id: '1', label: 'About', target: '#about', type: 'section', openInNewTab: false, order: 1 },
+        { id: '2', label: 'Experience', target: '#experience', type: 'section', openInNewTab: false, order: 2 },
+        { id: '3', label: 'Skills', target: '#skills', type: 'section', openInNewTab: false, order: 3 },
+        { id: '4', label: 'Projects', target: '#projects', type: 'section', openInNewTab: false, order: 4 },
+        { id: '5', label: 'Education', target: '#education', type: 'section', openInNewTab: false, order: 5 },
+        { id: '6', label: 'Contact', target: '#contact', type: 'section', openInNewTab: false, order: 6 }
+      ];
+    }
   },
 
   async getNavigationById(id) {

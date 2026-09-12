@@ -28,6 +28,14 @@ import { errorHandler } from './src/middleware/errorHandler.js';
 import { validateEnvironment } from './src/utils/envValidation.js';
 import { publicCacheMiddleware, noCacheMiddleware } from './src/middleware/cacheMiddleware.js';
 import { initialPortfolio } from './src/data/initialPortfolio.js';
+import { personalService } from './src/services/personalService.js';
+import { heroService } from './src/services/heroService.js';
+import { aboutService } from './src/services/aboutService.js';
+import { experienceService } from './src/services/experienceService.js';
+import { skillsService } from './src/services/skillsService.js';
+import { projectsService } from './src/services/projectsService.js';
+import { educationService, certificationsService, achievementsService } from './src/services/academicService.js';
+import { socialLinksService, contactService, navigationService } from './src/services/contactSocialNavService.js';
 
 dotenv.config();
 validateEnvironment();
@@ -110,12 +118,49 @@ app.get('/api/media/:id', getPublicMedia);
 
 app.get('/api/portfolio', async (req, res) => {
   try {
-    const livePersonal = await personalService.getPublicProfile();
+    const [
+      personal,
+      hero,
+      about,
+      experiences,
+      skills,
+      projects,
+      education,
+      certifications,
+      achievements,
+      socialLinks,
+      contact,
+      navigation
+    ] = await Promise.all([
+      personalService.getPublicProfile(),
+      heroService.getPublicHero(),
+      aboutService.getPublicAbout(),
+      experienceService.getPublicExperiences(),
+      skillsService.getPublicCategories(),
+      projectsService.getPublicProjects(),
+      educationService.getPublicEducation(),
+      certificationsService.getPublicCertifications(),
+      achievementsService.getPublicAchievements(),
+      socialLinksService.getPublicSocialLinks(),
+      contactService.getPublicContact(),
+      navigationService.getPublicNavigation()
+    ]);
+
     res.json({
       success: true,
       data: {
-        ...currentPortfolio,
-        personal: livePersonal || currentPortfolio.personal
+        personal: personal || currentPortfolio.personal,
+        hero: hero || currentPortfolio.hero,
+        about: about || currentPortfolio.about,
+        experiences: experiences && experiences.length > 0 ? experiences : currentPortfolio.experiences,
+        skills: skills && skills.length > 0 ? skills : currentPortfolio.skills,
+        projects: projects && projects.length > 0 ? projects : currentPortfolio.projects,
+        education: education && education.length > 0 ? education : currentPortfolio.education,
+        certifications,
+        achievements,
+        socialLinks: socialLinks && socialLinks.length > 0 ? socialLinks : currentPortfolio.socialLinks,
+        contact: contact || currentPortfolio.contact,
+        navigation: navigation && navigation.length > 0 ? navigation : currentPortfolio.navigation
       }
     });
   } catch {
@@ -145,6 +190,9 @@ app.post('/api/contact', (req, res) => {
 
 app.post('/api/admin/auth/login', loginRateLimiter, authController.login);
 app.post('/api/auth/login', loginRateLimiter, authController.login);
+app.post('/api/admin/auth/forgot-password', loginRateLimiter, authController.forgotPassword);
+app.post('/api/admin/auth/verify-reset-code', loginRateLimiter, authController.verifyResetCode);
+app.post('/api/admin/auth/reset-password', loginRateLimiter, authController.resetPassword);
 app.get('/api/admin/auth/me', requireAdminAuth, authController.getProfile);
 app.get('/api/admin/auth/csrf', requireAdminAuth, authController.getCsrfToken);
 app.post('/api/admin/auth/change-password', requireAdminAuth, sensitiveMutationLimiter, authController.changePassword);

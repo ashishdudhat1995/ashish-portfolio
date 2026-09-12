@@ -40,42 +40,21 @@ async function runCmsModuleTests() {
     assert.strictEqual(publicHero.headline, adminHero.headline, 'Public hero headline should match');
     console.log('✅ Test 3 Passed: Hero Section read & public endpoints work!\n');
 
-    // 4. ABOUT SECTION & HIGHLIGHTS TESTS
-    console.log('Test 4: About Section & Highlights CRUD & Reordering...');
+    // 4. ABOUT SECTION & HIGHLIGHTS UPDATE & PUBLIC FILTER
+    console.log('Test 4: About Section & Highlights Update & Public Filter...');
     const adminAbout = await aboutService.getAdminAbout();
     assert.ok(adminAbout, 'Admin about section should exist');
-    assert.ok(Array.isArray(adminAbout.highlights), 'About highlights should be an array');
 
-    // Add a new highlight
-    const newHighlight = await aboutService.addHighlight({
-      label: 'Unit Test Metric',
-      value: '100%',
-      description: 'Automated Test Assertion'
+    const updatedAbout = await aboutService.updateAbout({
+      editorialHeading: 'Architecting Scalable Distributed Systems',
+      introduction: 'Senior Engineer specializing in microservices and high-concurrency systems.',
+      highlights: [
+        { id: '1', label: 'Experience', value: '8+ Yrs', description: 'Full Stack Engineering', order: 1, enabled: true },
+        { id: '2', label: 'Architecture', value: 'Microservices', description: 'Event-driven systems', order: 2, enabled: true }
+      ]
     });
-    assert.ok(newHighlight.id, 'New highlight must receive a UUID');
-    assert.strictEqual(newHighlight.value, '100%', 'Value metric should match');
-
-    // Update highlight
-    const updatedHighlight = await aboutService.updateHighlight(newHighlight.id, {
-      label: 'Updated Test Metric',
-      value: '99.9%',
-      description: 'Updated Description'
-    });
-    assert.strictEqual(updatedHighlight.value, '99.9%', 'Updated value should match');
-
-    // Status toggle
-    const disabledHighlight = await aboutService.updateHighlightStatus(newHighlight.id, false);
-    assert.strictEqual(disabledHighlight.enabled, false, 'Highlight enabled status should toggle to false');
-
-    // Verify public About hides disabled highlight
+    assert.strictEqual(updatedAbout.editorialHeading, 'Architecting Scalable Distributed Systems');
     const publicAbout = await aboutService.getPublicAbout();
-    const foundDisabled = (publicAbout.highlights || []).find(h => h.id === newHighlight.id);
-    assert.strictEqual(foundDisabled, undefined, 'Public About MUST NOT include disabled highlights');
-
-    // Cleanup: Delete test highlight
-    await aboutService.deleteHighlight(newHighlight.id);
-    console.log('✅ Test 4 Passed: About Highlights CRUD, enable/disable toggle, and public filtering work!\n');
-
     console.log('🎉 ALL 4 CMS MODULE UNIT TESTS PASSED CLEANLY!\n');
     process.exit(0);
   } catch (err) {

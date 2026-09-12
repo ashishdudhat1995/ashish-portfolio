@@ -99,8 +99,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           {showProfileMenu && (
             <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-bgCard border border-borderGlass shadow-2xl p-3 space-y-2 z-50">
               <div className="p-2 border-b border-borderGlass text-[11px]">
-                <p className="font-bold text-white">{adminUser?.name || 'Ashishkumar Dudhat'}</p>
-                <p className="text-gray-400 text-[10px] truncate">{adminUser?.email || 'dudhatashish1995@gmail.com'}</p>
+                <p className="font-bold text-white">{adminUser?.name || 'Administrator'}</p>
+                <p className="text-gray-400 text-[10px] truncate">{adminUser?.email || ''}</p>
               </div>
 
               <div className="space-y-1">

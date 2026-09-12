@@ -29,7 +29,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Form State
-  const [emailInput, setEmailInput] = useState('dudhatashish1995@gmail.com');
+  const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [resetStatus, setResetStatus] = useState<string | null>(null);
@@ -193,7 +193,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         required
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
-                        placeholder="dudhatashish1995@gmail.com"
+                        placeholder="admin@example.com"
                         className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue"
                       />
                     </div>
@@ -239,6 +239,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         required
                         value={emailInput}
                         onChange={(e) => setEmailInput(e.target.value)}
+                        placeholder="admin@example.com"
                         className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue"
                       />
                     </div>
@@ -257,7 +258,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                       <input
                         type="password"
                         required
-                        placeholder="admin123"
+                        placeholder="••••••••"
                         value={passwordInput}
                         onChange={(e) => setPasswordInput(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue"

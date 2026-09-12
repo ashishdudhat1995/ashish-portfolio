@@ -60,7 +60,7 @@ export const ContactModule: React.FC<ContactModuleProps> = ({
   const [primaryCtaTarget, setPrimaryCtaTarget] = useState(data.presentation?.primaryCtaTarget || "#contact");
   const [enabled, setEnabled] = useState(data.presentation?.enabled !== false);
 
-  const [email, setEmail] = useState(data.personal?.email || 'dudhatashish1995@gmail.com');
+  const [email, setEmail] = useState(data.personal?.email || '');
   const [phone, setPhone] = useState(data.personal?.phone || '+91 7600908370');
   const [location, setLocation] = useState(data.personal?.location || 'Ahmedabad, Gujarat');
   const [availability, setAvailability] = useState(data.personal?.availability || 'Available to rejoin immediately');

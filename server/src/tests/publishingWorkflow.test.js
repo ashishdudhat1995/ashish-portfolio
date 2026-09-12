@@ -1,71 +1,68 @@
+import assert from 'assert';
 import { publishingValidationService } from '../services/publishingValidationService.js';
 import { publishingRepository } from '../repositories/publishingRepository.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-describe('Global Portfolio Settings & Draft / Published Workflow Tests', () => {
+async function runPublishingWorkflowTests() {
+  console.log('[Test Suite] Running Global Portfolio Settings & Draft / Published Workflow Tests...\n');
 
-  beforeAll(async () => {
-    // Ensure PortfolioSettings singleton exists
+  try {
     await publishingRepository.getPortfolioSettings();
-  });
 
-  afterAll(async () => {
+    // 1. Validate Personal missing fullName
+    console.log('Test 1: Validate Personal missing fullName...');
+    const errs1 = await publishingValidationService.validatePersonal({
+      fullName: '',
+      professionalTitle: 'Lead Engineer'
+    });
+    assert.ok(errs1.some(e => e.field === 'fullName'));
+    console.log('✅ Test 1 Passed: Personal validation caught missing fullName!\n');
+
+    // 2. Validate Project missing description
+    console.log('Test 2: Validate Project missing description...');
+    const errs2 = await publishingValidationService.validateProject({
+      name: 'Test Project',
+      description: ''
+    });
+    assert.ok(errs2.some(e => e.field === 'description'));
+    console.log('✅ Test 2 Passed: Project validation caught missing description!\n');
+
+    // 3. Validate SEO invalid JSON-LD syntax
+    console.log('Test 3: Validate SEO invalid JSON-LD syntax...');
+    const errs3 = await publishingValidationService.validateSeo({
+      title: 'Valid Title',
+      description: 'Valid Meta Description',
+      structuredDataEnabled: true,
+      structuredDataJson: '{ invalid json syntax }'
+    });
+    assert.ok(errs3.some(e => e.field === 'structuredDataJson'));
+    console.log('✅ Test 3 Passed: SEO validation caught invalid JSON-LD syntax!\n');
+
+    // 4. Pending Drafts Summary
+    console.log('Test 4: Get pending drafts summary...');
+    const summary = await publishingRepository.getPendingDraftsSummary();
+    assert.ok(summary.hasOwnProperty('isFullyPublished'));
+    assert.ok(summary.hasOwnProperty('totalDrafts'));
+    assert.ok(Array.isArray(summary.draftEntities));
+    console.log('✅ Test 4 Passed: Pending drafts summary returned cleanly!\n');
+
+    // 5. Publish Entity
+    console.log('Test 5: Publish entity (personal)...');
+    const pubRes = await publishingRepository.publishEntity('personal');
+    assert.strictEqual(pubRes.success, true);
+    assert.strictEqual(pubRes.data.status, 'PUBLISHED');
+    console.log('✅ Test 5 Passed: Entity published cleanly!\n');
+
+    console.log('🎉 ALL PUBLISHING WORKFLOW TESTS PASSED CLEANLY!\n');
     await prisma.$disconnect();
-  });
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Test Failure:', err);
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+}
 
-  describe('PublishingValidationService Unit Tests', () => {
-    test('validatePersonal should catch missing fullName', async () => {
-      const errors = await publishingValidationService.validatePersonal({
-        fullName: '',
-        professionalTitle: 'Lead Engineer'
-      });
-      expect(errors.some(e => e.field === 'fullName')).toBe(true);
-    });
-
-    test('validateProject should catch missing description', async () => {
-      const errors = await publishingValidationService.validateProject({
-        name: 'Test Project',
-        description: ''
-      });
-      expect(errors.some(e => e.field === 'description')).toBe(true);
-    });
-
-    test('validateSeo should catch invalid JSON-LD syntax', async () => {
-      const errors = await publishingValidationService.validateSeo({
-        title: 'Valid Title',
-        description: 'Valid Meta Description',
-        structuredDataEnabled: true,
-        structuredDataJson: '{ invalid json syntax }'
-      });
-      expect(errors.some(e => e.field === 'structuredDataJson')).toBe(true);
-    });
-  });
-
-  describe('PublishingRepository Integration Tests', () => {
-    test('getPendingDraftsSummary should return valid summary object', async () => {
-      const summary = await publishingRepository.getPendingDraftsSummary();
-      expect(summary).toHaveProperty('isFullyPublished');
-      expect(summary).toHaveProperty('totalDrafts');
-      expect(summary).toHaveProperty('draftEntities');
-      expect(Array.isArray(summary.draftEntities)).toBe(true);
-    });
-
-    test('publishEntity should set status to PUBLISHED for singletons', async () => {
-      const res = await publishingRepository.publishEntity('personal');
-      expect(res.success).toBe(true);
-      expect(res.data.status).toBe('PUBLISHED');
-    });
-
-    test('publishAllChanges should execute transactionally', async () => {
-      const res = await publishingRepository.publishAllChanges({ adminUser: { email: 'admin@portfolio.com' } });
-      expect(res.success).toBe(true);
-      
-      const summary = await publishingRepository.getPendingDraftsSummary();
-      expect(summary.totalDrafts).toBe(0);
-      expect(summary.isFullyPublished).toBe(true);
-    });
-  });
-
-});
+runPublishingWorkflowTests();

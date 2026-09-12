@@ -3,6 +3,7 @@ import {
   Lock, 
   KeyRound, 
   Eye, 
+  EyeOff,
   Clock
 } from 'lucide-react';
 import { portfolioService } from '../../services/portfolioService';
@@ -10,6 +11,9 @@ import {
   fetchAdminMe, 
   adminLogout, 
   adminLogin,
+  requestAdminForgotPassword,
+  verifyAdminResetCode,
+  resetAdminPassword,
   fetchAdminPersonal,
   updateAdminPersonal,
   fetchAdminHero,
@@ -197,14 +201,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onClose }) => {
     fetchAdminUnreadLeadsCount().then(count => setUnreadLeadsCount(count)).catch(() => {});
   }, []);
 
-  // Login Form State
+  // Login & Password Reset Form State
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [emailInput, setEmailInput] = useState('dudhatashish1995@gmail.com');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  
+  // Forgot Password 3-Step Workflow
+  const [resetStep, setResetStep] = useState<1 | 2 | 3>(1);
+  const [resetToken, setResetToken] = useState<string>('');
   const [resetEmail, setResetEmail] = useState('');
+  const [resetCodeInput, setResetCodeInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [resetStatus, setResetStatus] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Portfolio State
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
@@ -376,13 +392,96 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onClose }) => {
     }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleRequestForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setResetStatus('Password reset link & security token dispatched to ' + resetEmail);
-    setTimeout(() => {
-      setResetStatus(null);
-      setShowForgotPassword(false);
-    }, 4000);
+    setIsResetting(true);
+    setResetError(null);
+    setResetStatus(null);
+
+    try {
+      const res = await requestAdminForgotPassword(resetEmail);
+      setIsResetting(false);
+      setResetStatus(res.message || 'Verification code sent to your email.');
+      setResetStep(2);
+    } catch (err) {
+      setIsResetting(false);
+      setResetError(err instanceof Error ? err.message : 'Failed to request password reset code.');
+    }
+  };
+
+  const handleVerifyResetCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetting(true);
+    setResetError(null);
+    setResetStatus(null);
+
+    if (!resetCodeInput || resetCodeInput.trim().length !== 6) {
+      setIsResetting(false);
+      setResetError('Please enter the 6-digit verification code sent to your email.');
+      return;
+    }
+
+    try {
+      const res = await verifyAdminResetCode({
+        email: resetEmail,
+        code: resetCodeInput.trim()
+      });
+
+      setIsResetting(false);
+      if (res.resetToken) {
+        setResetToken(res.resetToken);
+      }
+      setResetStatus(res.message || 'Verification code confirmed! Set your new password below.');
+      setResetStep(3);
+    } catch (err) {
+      setIsResetting(false);
+      setResetError(err instanceof Error ? err.message : 'Invalid 6-digit verification code. Please try again.');
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetting(true);
+    setResetError(null);
+    setResetStatus(null);
+
+    if (!newPasswordInput || newPasswordInput.length < 6) {
+      setIsResetting(false);
+      setResetError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPasswordInput !== confirmPasswordInput) {
+      setIsResetting(false);
+      setResetError('New password and confirmation do not match.');
+      return;
+    }
+
+    try {
+      const res = await resetAdminPassword({
+        email: resetEmail,
+        resetToken: resetToken || undefined,
+        code: resetCodeInput || undefined,
+        newPassword: newPasswordInput,
+        confirmPassword: confirmPasswordInput
+      });
+
+      setIsResetting(false);
+      setResetStatus(res.message || 'Password reset successfully! Log in with your new password.');
+      setPasswordInput(newPasswordInput);
+      setTimeout(() => {
+        setShowForgotPassword(false);
+        setResetStep(1);
+        setResetStatus(null);
+        setResetError(null);
+        setResetCodeInput('');
+        setNewPasswordInput('');
+        setConfirmPasswordInput('');
+      }, 2500);
+    } catch (err) {
+      setIsResetting(false);
+      setResetError(err instanceof Error ? err.message : 'Failed to reset password.');
+    }
   };
 
   const handleLogout = async () => {
@@ -1133,41 +1232,175 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onClose }) => {
               <div className="p-4 rounded-3xl bg-bgVoid border border-borderGlass inline-block text-accentCyan">
                 <KeyRound className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-extrabold text-white">Reset Admin Password</h3>
+              <div>
+                <span className="text-[10px] uppercase text-accentCyan font-bold tracking-widest block mb-1">
+                  SECURITY & RECOVERY (STEP {resetStep} OF 3)
+                </span>
+                <h3 className="text-2xl font-extrabold text-white">
+                  {resetStep === 1 && 'Forgot Password?'}
+                  {resetStep === 2 && 'Enter 6-Digit Code'}
+                  {resetStep === 3 && 'Set New Password'}
+                </h3>
+              </div>
 
               {resetStatus && (
-                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs leading-relaxed">
                   {resetStatus}
                 </div>
               )}
 
-              <form onSubmit={handleForgotPassword} className="space-y-4 text-left">
-                <FormField label="Admin Email" required>
-                  <input
-                    type="email"
-                    required
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="dudhatashish1995@gmail.com"
-                    className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-white"
-                  />
-                </FormField>
+              {resetError && (
+                <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+                  {resetError}
+                </div>
+              )}
 
-                <button
-                  type="submit"
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accentBlue to-accentIndigo text-white font-bold text-xs uppercase cursor-pointer"
-                >
-                  Dispatch Reset Link
-                </button>
+              {/* STEP 1: REQUEST CODE */}
+              {resetStep === 1 && (
+                <form onSubmit={handleRequestForgotPassword} className="space-y-4 text-left">
+                  <p className="text-xs text-gray-400 font-sans">
+                    Enter your administrator email address below to receive a 6-digit verification code.
+                  </p>
 
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPassword(false)}
-                  className="w-full text-center text-xs text-gray-400 hover:text-white pt-2 cursor-pointer"
-                >
-                  Return to Sign In
-                </button>
-              </form>
+                  <FormField label="Admin Email Address" required>
+                    <input
+                      type="email"
+                      required
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="admin@example.com"
+                      className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue text-xs"
+                    />
+                  </FormField>
+
+                  <button
+                    type="submit"
+                    disabled={isResetting}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accentBlue to-accentIndigo text-white font-bold text-xs uppercase shadow-glow-blue cursor-pointer disabled:opacity-50"
+                  >
+                    {isResetting ? 'Sending Code...' : 'Send Verification Code'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setResetError(null);
+                    }}
+                    className="w-full text-center text-xs text-gray-400 hover:text-white pt-2 cursor-pointer"
+                  >
+                    ← Return to Sign In
+                  </button>
+                </form>
+              )}
+
+              {/* STEP 2: VERIFY 6-DIGIT CODE */}
+              {resetStep === 2 && (
+                <form onSubmit={handleVerifyResetCode} className="space-y-4 text-left">
+                  <p className="text-xs text-gray-300 font-sans leading-relaxed">
+                    A 6-digit verification code was sent to <strong className="text-accentCyan">{resetEmail}</strong>. Please check your email inbox and enter the code below.
+                  </p>
+
+                  <FormField label="6-Digit Verification Code" required>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={resetCodeInput}
+                      onChange={(e) => setResetCodeInput(e.target.value)}
+                      placeholder="e.g. 849201"
+                      className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-accentCyan font-bold tracking-widest text-center text-base focus:outline-none focus:border-accentBlue"
+                    />
+                  </FormField>
+
+                  <button
+                    type="submit"
+                    disabled={isResetting}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accentBlue to-accentIndigo text-white font-bold text-xs uppercase shadow-glow-blue cursor-pointer disabled:opacity-50"
+                  >
+                    {isResetting ? 'Verifying Code...' : 'Verify Code & Proceed'}
+                  </button>
+
+                  <div className="flex items-center justify-between text-xs pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetStep(1);
+                        setResetError(null);
+                      }}
+                      className="text-gray-400 hover:text-white cursor-pointer"
+                    >
+                      ← Back to Step 1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRequestForgotPassword}
+                      className="text-accentCyan hover:underline cursor-pointer"
+                    >
+                      Resend Code
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* STEP 3: SET NEW PASSWORD */}
+              {resetStep === 3 && (
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-4 text-left">
+                  <p className="text-xs text-emerald-400 font-mono">
+                    ✓ Identity verified! Enter your new admin password below.
+                  </p>
+
+                  <FormField label="New Password" required>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        required
+                        placeholder="New password (min 6 chars)"
+                        value={newPasswordInput}
+                        onChange={(e) => setNewPasswordInput(e.target.value)}
+                        className="w-full px-4 py-3 pr-11 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-white cursor-pointer p-1"
+                        title={showNewPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </FormField>
+
+                  <FormField label="Confirm New Password" required>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        placeholder="Re-enter new password"
+                        value={confirmPasswordInput}
+                        onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                        className="w-full px-4 py-3 pr-11 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-white cursor-pointer p-1"
+                        title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </FormField>
+
+                  <button
+                    type="submit"
+                    disabled={isResetting}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-accentBlue to-accentIndigo text-white font-bold text-xs uppercase shadow-glow-blue cursor-pointer disabled:opacity-50"
+                  >
+                    {isResetting ? 'Saving New Password...' : 'Save New Password & Sign In'}
+                  </button>
+                </form>
+              )}
             </div>
           ) : (
             <div className="space-y-6">
@@ -1187,6 +1420,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onClose }) => {
                 </div>
               )}
 
+              {resetStatus && (
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+                  {resetStatus}
+                </div>
+              )}
+
               <form onSubmit={handleLoginSubmit} className="space-y-4 text-left">
                 <FormField label="Admin Email" required>
                   <input
@@ -1194,20 +1433,47 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onClose }) => {
                     required
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue"
+                    placeholder="admin@example.com"
+                    className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue text-xs"
                   />
                 </FormField>
 
                 <FormField label="Password" required>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="••••••••"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      className="w-full px-4 py-3 pr-11 rounded-xl bg-bgVoid border border-borderGlass text-white focus:outline-none focus:border-accentBlue text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-white cursor-pointer p-1"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </FormField>
+
+                <div className="flex justify-end pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(emailInput);
+                      setShowForgotPassword(true);
+                      setResetStep(1);
+                      setResetError(null);
+                      setResetStatus(null);
+                    }}
+                    className="text-xs text-accentCyan hover:underline cursor-pointer font-bold"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
 
                 <button
                   type="submit"
@@ -1299,7 +1565,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onClose }) => {
           data={(personalState || {
             fullName: 'ASHISHKUMAR DUDHAT',
             professionalTitle: 'Senior Software Engineer | Lead Engineer | Full Stack Developer',
-            email: 'dudhatashish1995@gmail.com',
+            email: adminUser?.email || '',
             phone: '+91 7600908370',
             location: 'Ahmedabad, Gujarat',
             availability: 'Available to rejoin immediately',
@@ -1546,7 +1812,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onClose }) => {
                 personal: {
                   fullName: 'ASHISHKUMAR DUDHAT',
                   professionalTitle: 'Senior Software Engineer | Lead Engineer | Full Stack Developer',
-                  email: 'dudhatashish1995@gmail.com',
+                  email: adminUser?.email || '',
                   phone: '+91 7600908370',
                   location: 'Ahmedabad, Gujarat',
                   availability: 'Available to rejoin immediately'
@@ -1648,7 +1914,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onClose }) => {
             </div>
             <div>
               <span className="text-[10px] text-gray-400 uppercase">Admin Email Address</span>
-              <p className="text-sm font-bold text-accentCyan">{adminUser?.email || 'dudhatashish1995@gmail.com'}</p>
+              <p className="text-sm font-bold text-accentCyan">{adminUser?.email || ''}</p>
             </div>
             <div>
               <span className="text-[10px] text-gray-400 uppercase">Access Role</span>

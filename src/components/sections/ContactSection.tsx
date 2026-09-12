@@ -62,7 +62,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const personal = {
-    email: fallbackPersonal?.email || contactData?.contactInfo?.email || 'dudhatashish1995@gmail.com',
+    email: fallbackPersonal?.email || contactData?.contactInfo?.email || '',
     phone: fallbackPersonal?.phone || contactData?.contactInfo?.phone || '+91 7600908370',
     location: fallbackPersonal?.location || contactData?.contactInfo?.location || 'Ahmedabad, Gujarat',
     availability: fallbackPersonal?.availability || fallbackPersonal?.availabilityStatus || contactData?.contactInfo?.availability || 'Available to Join Immediately'

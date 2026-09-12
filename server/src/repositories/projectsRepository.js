@@ -59,7 +59,7 @@ export const projectsRepository = {
         githubUrl: data.githubUrl || null,
         order,
         enabled: data.enabled !== undefined ? Boolean(data.enabled) : true,
-        status: data.status || 'published'
+        status: data.status ? data.status.toUpperCase() : 'PUBLISHED'
       }
     });
   },

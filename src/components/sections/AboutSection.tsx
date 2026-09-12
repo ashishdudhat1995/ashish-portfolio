@@ -36,11 +36,40 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
     { id: "pillar-3", text: "Agile Team Mentorship", order: 3, enabled: true }
   ];
 
+  const DEFAULT_TECHNICAL_STRENGTHS = [
+    {
+      category: "Frontend Engineering",
+      description: "Building responsive, modern, component-driven interfaces with state hydration and memoization.",
+      skills: ["Angular", "React.js", "Next.js", "Redux", "TypeScript", "Tailwind CSS", "Context API"],
+      icon: "Code2"
+    },
+    {
+      category: "Backend Engineering",
+      description: "Architecting high-throughput RESTful APIs, microservices, GraphQL, and real-time socket channels.",
+      skills: ["Node.js", "Express.js", "NestJS", "REST APIs", "GraphQL", "Socket.IO", "RabbitMQ", "JWT / OAuth2"],
+      icon: "Cpu"
+    },
+    {
+      category: "Cloud & Architecture",
+      description: "Containerizing services, managing cloud infrastructure, and tuning relational and document datastores.",
+      skills: ["AWS (EC2, S3, RDS, Lambda)", "GCP", "Docker", "MongoDB", "PostgreSQL", "MySQL", "Redis", "Elasticsearch"],
+      icon: "Cloud"
+    },
+    {
+      category: "Technical Leadership",
+      description: "Driving engineering standards, mentoring developers, establishing code reviews, and streamlining CI/CD.",
+      skills: ["Agile Scrum", "Sprint Planning", "Code Reviews", "Developer Mentoring", "GitHub Actions", "Bitbucket Pipelines"],
+      icon: "Award"
+    }
+  ];
+
   const rawPillars = (about && Array.isArray(about.pillars) && about.pillars.length > 0) ? about.pillars : DEFAULT_PILLARS;
   const pillars = rawPillars.filter((p: any) => p.enabled !== false);
   const rawDomains = (about && Array.isArray(about.domains)) ? about.domains : [];
   const domains = rawDomains.filter((d: any) => d.enabled !== false);
-  const technicalStrengths = (about && Array.isArray(about.technicalStrengths)) ? about.technicalStrengths : [];
+  const technicalStrengths = (about && Array.isArray(about.technicalStrengths) && about.technicalStrengths.length > 0) 
+    ? about.technicalStrengths 
+    : DEFAULT_TECHNICAL_STRENGTHS;
 
   const [activeDomainIndex, setActiveDomainIndex] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<number>(0);
